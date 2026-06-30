@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Cobertura Curricular</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header dash-header">
+            <div class="header-content">
+                <h1>Dashboard de Cobertura Curricular</h1>
+                <p class="subtitle">Resultados de la inferencia semántica BETO</p>
+            </div>
+            <div class="header-actions">
+                <a href="/" class="btn btn-secondary btn-sm">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                    Volver al análisis
+                </a>
+                <button class="btn btn-success btn-sm" id="exportarBtn" onclick="exportarDashboardExcel()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+                    Exportar Excel
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content dash-main">
+
+            <!-- ============ 1. OVERVIEW (HERO) ============ -->
+            <section class="overview-grid">
+                <!-- Hero: cobertura -->
+                <div class="hero-card">
+                    <span class="kpi-label">Cobertura de RAs</span>
+                    <div class="hero-value-row">
+                        <span class="hero-value" id="kpiCobertura">–</span>
+                    </div>
+                    <div class="coverage-track">
+                        <div class="coverage-fill" id="coberturaFill"></div>
+                    </div>
+                    <span class="kpi-foot" id="kpiCoberturaFoot">RAs conectados / total</span>
+                </div>
+
+                <!-- Supporting stats -->
+                <div class="stat-tiles">
+                    <div class="stat-tile">
+                        <div class="stat-tile-head">
+                            <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                            <span class="kpi-label">Ramos analizados</span>
+                        </div>
+                        <span class="stat-value" id="kpiRamos">–</span>
+                        <span class="kpi-foot" id="kpiRamosFoot">cargando...</span>
+                    </div>
+
+                    <div class="stat-tile">
+                        <div class="stat-tile-head">
+                            <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11H3v10h6V11Z"/><path d="M15 7H9v14h6V7Z"/><path d="M21 3h-6v18h6V3Z"/></svg>
+                            <span class="kpi-label">RAs evaluados</span>
+                        </div>
+                        <span class="stat-value" id="kpiRasTotal">–</span>
+                        <span class="kpi-foot" id="kpiRasTotalFoot">resultados de aprendizaje</span>
+                    </div>
+
+                    <div class="stat-tile">
+                        <div class="stat-tile-head">
+                            <svg class="kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            <span class="kpi-label">Enlaces totales</span>
+                        </div>
+                        <span class="stat-value" id="kpiEnlaces">–</span>
+                        <span class="kpi-foot" id="kpiEnlacesFoot">score promedio –%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 2. DIAGNÓSTICO (2 PANELES) ============ -->
+            <section class="diag-grid">
+                <!-- Calidad de los enlaces -->
+                <div class="dash-section diag-panel">
+                    <div class="section-head">
+                        <h2>Calidad de los enlaces</h2>
+                        <span class="section-sub" id="totalEnlacesLabel">– enlaces</span>
+                    </div>
+                    <p class="section-note">
+                        Cada barra cuenta <strong>enlaces</strong> (la conexión de un RA con su mejor match de
+                        prerrequisito), no RAs únicos. Un mismo RA puede aparecer en varios enlaces.
+                    </p>
+                    <div class="severity-bars" id="severityBars">
+                        <div class="sev-row">
+                            <span class="sev-tag sev-alto">Alto</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-alto" id="barAlto"></div></div>
+                            <span class="sev-count" id="countAlto">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-medio">Medio</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-medio" id="barMedio"></div></div>
+                            <span class="sev-count" id="countMedio">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-bajo">Bajo</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-bajo" id="barBajo"></div></div>
+                            <span class="sev-count" id="countBajo">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-sinmatch">Sin match</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-sinmatch" id="barSinMatch"></div></div>
+                            <span class="sev-count" id="countSinMatch">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RAs sin conectar por razón -->
+                <div class="dash-section diag-panel">
+                    <div class="section-head">
+                        <h2>RAs sin conectar &mdash; por qué</h2>
+                        <span class="section-sub" id="totalRasSinLabel">– sin conectar</span>
+                    </div>
+                    <p class="section-note">
+                        Resultados de aprendizaje que no quedaron vinculados a ningún prerrequisito, agrupados
+                        por la causa. <strong id="ramosSinInline">–</strong> ramos no tienen ninguna conexión.
+                    </p>
+                    <div class="severity-bars" id="razonBars">
+                        <div class="sev-row">
+                            <span class="sev-tag sev-razon-sinprereq">Sin prerrequisitos</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-sinprereq" id="barSinPrereq"></div></div>
+                            <span class="sev-count" id="countSinPrereq">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-razon-prereqnf">Prereq. no en malla</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-prereqnf" id="barPrereqNF"></div></div>
+                            <span class="sev-count" id="countPrereqNF">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-razon-scorebajo">Score bajo (≤40%)</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-scorebajo" id="barScoreBajo"></div></div>
+                            <span class="sev-count" id="countScoreBajo">0</span>
+                        </div>
+                        <div class="sev-row">
+                            <span class="sev-tag sev-razon-sinevaluar">Sin evaluar</span>
+                            <div class="sev-track"><div class="sev-fill sev-fill-sinevaluar" id="barSinEvaluar"></div></div>
+                            <span class="sev-count" id="countSinEvaluar">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 3. DETALLE (TABLAS) ============ -->
+            <section class="dash-section dash-tables">
+                <div class="dash-tabs-header">
+                    <button class="dash-tab-btn active" onclick="switchDashTab('tab-ramos-sin')">
+                        Ramos sin RA conectado <span class="count-pill" id="pillRamosSin">0</span>
+                    </button>
+                    <button class="dash-tab-btn" onclick="switchDashTab('tab-ras-sin')">
+                        RAs sin conectar <span class="count-pill" id="pillRasSin">0</span>
+                    </button>
+                    <button class="dash-tab-btn" onclick="switchDashTab('tab-top-prereq')">
+                        Prerrequisitos más referenciados
+                    </button>
+                    <button class="dash-tab-btn" onclick="switchDashTab('tab-ramos-todos')">
+                        Todos los ramos
+                    </button>
+                    <button class="dash-tab-btn" onclick="switchDashTab('tab-enlaces-debiles')">
+                        Enlaces débiles (≤40%) <span class="count-pill" id="pillEnlacesDebiles">0</span>
+                    </button>
+                </div>
+
+                <div id="tab-ramos-sin" class="dash-tab-content active">
+                    <p class="table-hint">Ramos que tienen Resultados de Aprendizaje definidos, pero ninguno fue
+                        vinculado con un RA de prerrequisito (score &gt; 40%).</p>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre del Ramo</th>
+                                    <th>Total RAs</th>
+                                    <th>¿Tiene Prerrequisitos?</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaRamosSin">
+                                <tr class="empty-row"><td colspan="4">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-ras-sin" class="dash-tab-content">
+                    <p class="table-hint">Resultados de Aprendizaje individuales que no quedaron vinculados a ningún
+                        RA de prerrequisito, clasificados por la razón.</p>
+                    <div class="razon-filters" id="razonFilters">
+                        <button class="razon-filter-btn active" onclick="filtrarRazon('todos', this)">Todos</button>
+                        <button class="razon-filter-btn" onclick="filtrarRazon('sin_prerrequisitos', this)">Sin prerrequisitos</button>
+                        <button class="razon-filter-btn" onclick="filtrarRazon('prereq_no_encontrado', this)">Prereq. no en malla</button>
+                        <button class="razon-filter-btn" onclick="filtrarRazon('score_bajo', this)">Score bajo</button>
+                        <button class="razon-filter-btn" onclick="filtrarRazon('sin_evaluar', this)">Sin evaluar</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ramo</th>
+                                    <th>Nombre del Ramo</th>
+                                    <th>RA</th>
+                                    <th>Descripción</th>
+                                    <th>Razón</th>
+                                    <th>Mejor score visto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaRasSin">
+                                <tr class="empty-row"><td colspan="6">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-enlaces-debiles" class="dash-tab-content">
+                    <p class="table-hint">Lista de todos los cruces específicos evaluados que no alcanzaron el umbral de similitud (&gt;40%), independientemente de si el RA encontró cobertura en otro ramo.</p>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ramo Actual</th>
+                                    <th>RA Actual</th>
+                                    <th>Ramo Prereq</th>
+                                    <th>RA Prereq</th>
+                                    <th>Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaEnlacesDebiles">
+                                <tr class="empty-row"><td colspan="5">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-top-prereq" class="dash-tab-content">
+                    <p class="table-hint">Ramos cuyos Resultados de Aprendizaje son referenciados como
+                        prerrequisito con mayor frecuencia (enlaces alto/medio).</p>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Conexiones (alto/medio)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaTopPrereq">
+                                <tr class="empty-row"><td colspan="4">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-ramos-todos" class="dash-tab-content">
+                    <p class="table-hint">Vista general de cada ramo con su cobertura de RAs.</p>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Prerrequisitos</th>
+                                    <th>Total RAs</th>
+                                    <th>Conectados</th>
+                                    <th>Sin conectar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaRamosTodos">
+                                <tr class="empty-row"><td colspan="6">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

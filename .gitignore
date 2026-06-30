@@ -1,0 +1,24 @@
+# Ignorar el modelo de NLP súper pesado
+resultados_beto_finetuned_negative/
+Malla_ING/
+
+# Carpetas de archivos generados dinámicamente por la app
+uploads/
+static/graphs/
+
+# Entornos virtuales de Python (si usas uno)
+venv/
+env/
+
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+OA.csv
+OA_links.csv
+train.ipynb
+train.py

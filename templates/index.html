@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador Curricular Integral - Interfaz Web</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .panel-detalle {
+            margin-top: 16px;
+            background: #1e1e2e;
+            border: 1px solid #3a3a52;
+            border-radius: 10px;
+            color: #f1f1f1;
+            overflow: hidden;
+        }
+        .panel-detalle.hidden { display: none; }
+        .panel-detalle-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #27273f;
+            padding: 10px 16px;
+            cursor: pointer;
+            list-style: none;
+        }
+        .panel-detalle-header::-webkit-details-marker { display: none; }
+        .panel-detalle-header::before {
+            content: "▸";
+            display: inline-block;
+            margin-right: 8px;
+            color: #9aa0c3;
+            transition: transform 0.2s ease;
+        }
+        details[open] > .panel-detalle-header::before { transform: rotate(90deg); }
+        .panel-detalle-header h3 { margin: 0; font-size: 15px; flex: 1; }
+        .panel-close { cursor: pointer; font-size: 22px; line-height: 1; color: #bbb; }
+        .panel-close:hover { color: #fff; }
+        .panel-detalle-body { padding: 16px; }
+        .detalle-enlace {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 14px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .detalle-nodo {
+            background: #2a2a40;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .detalle-nodo.origen { border-left: 4px solid #2ecc71; }
+        .detalle-nodo.destino { border-left: 4px solid #e74c3c; }
+        .detalle-nodo .ramo-label { font-size: 12px; color: #9aa0c3; margin-bottom: 4px; }
+        .detalle-nodo .ramo-codigo { font-weight: 700; font-size: 14px; }
+        .detalle-nodo .ra-texto { margin-top: 8px; font-size: 13px; line-height: 1.4; }
+        .detalle-flecha { font-size: 24px; text-align: center; color: #f1c40f; }
+        .detalle-score {
+            text-align: center;
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+        .detalle-score b { font-size: 18px; color: #fff; }
+        .panel-detalle-actions { display: flex; gap: 10px; margin-top: 6px; }
+        .detalle-ramo-info { font-size: 13px; line-height: 1.6; }
+        .detalle-ramo-info .prereq-tag {
+            display: inline-block;
+            background: #2a2a40;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px 4px 2px 0;
+            font-size: 12px;
+        }
+        tr.fila-clickeable { cursor: pointer; }
+        tr.fila-clickeable:hover { background: rgba(52,152,219,0.12); }
+        tr.fila-activa { background: rgba(52,152,219,0.18); }
+        tr.fila-detalle-expandida { background: transparent; }
+        tr.fila-detalle-expandida > td {
+            padding: 16px;
+            border: none;
+            background: #1e1e2e;
+            border-left: 3px solid #3498db;
+        }
+        tr.fila-resaltada {
+            background: rgba(241,196,15,0.35) !important;
+            transition: background 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>Mapeo Automático de Malla Curricular</h1>
+                <p class="subtitle">BETO Fine-tuned + Análisis Semántico</p>
+            </div>
+            <div class="status-badge" id="statusBadge">
+                <span class="status-dot"></span>
+                <span id="statusText">Inicializando...</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="control-bar">
+                <div class="control-item">
+                    <input type="text" id="carpetaInput" placeholder="Carpeta con PDFs..." readonly>
+                    <button class="btn btn-primary btn-sm" onclick="seleccionarCarpeta()" aria-label="Seleccionar carpeta" title="Seleccionar carpeta">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                    </button>
+                    <button class="btn btn-success btn-sm" id="procesarBtn" onclick="procesarCarpeta()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+                        Analizar
+                    </button>
+                    <input type="file" id="carpetaFile" webkitdirectory directory hidden>
+                </div>
+                <div class="control-item">
+                    <button class="btn btn-info btn-sm" id="grafoMacroBtn" onclick="generarGrafoMacro()" disabled>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/><path d="M12 8v3m0 0-5 5m5-5 5 5"/></svg>
+                        Grafo Macro
+                    </button>
+                    <button class="btn btn-warning btn-sm" id="inferBtn" onclick="ejecutarInferencia()" disabled>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+                        Inferencia
+                    </button>
+                    <a href="/dashboard" class="btn btn-info btn-sm" style="margin-left:12px;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                        Resumen inferencia
+                    </a>
+                    <button class="btn btn-purple btn-sm" id="grafoMicroBtn" onclick="generarGrafoMicro()" disabled>
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8m7-8-5 8"/></svg>
+                        Grafo Micro
+                    </button>
+                </div>
+                <div class="control-status">
+                    <div id="progressBar" class="progress-bar hidden">
+                        <div id="progressFill" class="progress-fill"></div>
+                        <span id="progressText" class="progress-text">0%</span>
+                    </div>
+                    <span id="barStatusLabel" class="status-label">Listo</span>
+                </div>
+            </div>
+
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('tab-malla')">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                        Malla Curricular
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('tab-matches')">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3v1m0 4v1a3 3 0 0 1-3 3H9"/><path d="m15 4 2 2-2 2m0 8 2 2-2 2"/></svg>
+                        Matches Semánticos
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('tab-grafo')">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="3"/><circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/><path d="M12 8v3m0 0-5 5m5-5 5 5"/></svg>
+                        Visualización
+                    </button>
+                </div>
+
+                <div id="tab-malla" class="tab-content active">
+                    <div class="controls" style="margin-bottom: 10px;">
+                        <input type="text" id="buscadorRamoInput" placeholder="Buscar ramo por código o nombre..." style="flex:1; padding:8px; border-radius:4px; border:1px solid #cbd5e1;" oninput="filtrarTablaMalla(this.value)">
+                    </div>
+                    <div class="table-container">
+                        <table id="mallTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre del Ramo</th>
+                                    <th>Prerrequisitos</th>
+                                    <th>RAs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mallTableBody">
+                                <tr class="empty-row"><td colspan="4">Carga una carpeta para ver los ramos</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-matches" class="tab-content">
+                    <div class="controls" style="justify-content: space-between; align-items: center;">
+                        <div class="filter-buttons">
+                            <button class="btn btn-small" onclick="filtrarMatches('todos')">Todos</button>
+                            <button class="btn btn-small" onclick="filtrarMatches('alto')">Alto</button>
+                            <button class="btn btn-small" onclick="filtrarMatches('medio')">Medio</button>
+                            <button class="btn btn-small" onclick="filtrarMatches('bajo')">Bajo</button>
+                            <button class="btn btn-small" onclick="filtrarMatches('no_match')">No hay match</button>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary btn-sm" onclick="abrirModalCrear()">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                Crear Enlace
+                            </button>
+                            <button class="btn btn-success btn-sm" id="downloadExcelBtn" onclick="descargarReporteExcel()" disabled>
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+                                Descargar Excel
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="cargarInferenciaBtn" onclick="document.getElementById('cargarInferenciaFile').click()">
+                                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+                                Cargar Inferencia
+                            </button>
+                            <input type="file" id="cargarInferenciaFile" accept=".xlsx,.xls" hidden onchange="cargarInferenciaDesdeExcel(event)">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="matchesTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ramo Actual</th>
+                                    <th>RA Actual</th>
+                                    <th>Ramo Prereq</th>
+                                    <th>RA Prereq</th>
+                                    <th>Score</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matchesTableBody">
+                                <tr class="empty-row"><td colspan="6">Ejecuta la inferencia para ver los matches</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab-grafo" class="tab-content">
+                    <div id="grafoContainer" class="grafo-container">
+                        <p class="placeholder">Selecciona "Grafo Macro" o "Grafo Micro" para visualizar</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panelDetalle" class="panel-detalle hidden">
+                <details id="panelDetalleToggle" open>
+                    <summary class="panel-detalle-header">
+                        <h3 id="panelDetalleTitulo" style="display:inline;">Detalle</h3>
+                        <span class="panel-close" onclick="event.preventDefault(); event.stopPropagation(); cerrarPanelDetalle();">&times;</span>
+                    </summary>
+                    <div id="panelDetalleBody" class="panel-detalle-body"></div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="modalCorreccion" class="modal hidden">
+        <div class="modal-content">
+            <span class="modal-close" onclick="cerrarModal()">&times;</span>
+            <h2>Edición de Enlace Manual</h2>
+            <div class="modal-body">
+                <p><strong>Ramo Actual:</strong> <span id="modalRamoAct"></span></p>
+                <p><strong>RA Actual a contrastar:</strong></p>
+                <div id="modalRAActual" class="modal-ra-actual"></div>
+
+                <p><strong>Ramo Prerrequisito:</strong> <span id="modalRamoPre"></span></p>
+                <p><strong>Selecciona el RA correcto del prerrequisito:</strong></p>
+
+                <div id="modalRAList" class="ra-list-container"></div>
+
+                <p style="margin-top: 15px;"><strong>Fijar Nivel de Vinculación:</strong></p>
+                <div class="severity-options">
+                    <label><input type="radio" name="modalSeveridad" value="alto"> Alto</label>
+                    <label><input type="radio" name="modalSeveridad" value="medio"> Medio</label>
+                    <label><input type="radio" name="modalSeveridad" value="bajo"> Bajo</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="eliminarLink()" style="margin-right: auto;">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
+                    Desvincular (Sin Match)
+                </button>
+                <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarCorreccion()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="modalCrearLink" class="modal hidden">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="modal-close" onclick="cerrarModalCrear()">&times;</span>
+            <h2>Crear Enlace Semántico Manual</h2>
+            <div class="modal-body" style="display: flex; gap: 20px;">
+                
+                <div style="flex: 1;">
+                    <p><strong>1. Ramo Actual (Destino):</strong></p>
+                    <select id="nuevoRamoAct" onchange="cargarRAsParaSelect('act')" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #cbd5e1;"></select>
+                    <p style="font-size: 12px; color: #64748b;">Selecciona el RA:</p>
+                    <div id="listaNuevosRaAct" class="ra-list-container" style="height: 180px;"></div>
+                </div>
+
+                <div style="flex: 1;">
+                    <p><strong>2. Ramo Prerrequisito (Origen):</strong></p>
+                    <select id="nuevoRamoPre" onchange="cargarRAsParaSelect('pre')" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #cbd5e1;"></select>
+                    <p style="font-size: 12px; color: #64748b;">Selecciona el RA base:</p>
+                    <div id="listaNuevosRaPre" class="ra-list-container" style="height: 180px;"></div>
+                </div>
+
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <p><strong>3. Nivel de Vinculación:</strong></p>
+                <div class="severity-options">
+                    <label><input type="radio" name="nuevoSeveridad" value="alto"> Alto</label>
+                    <label><input type="radio" name="nuevoSeveridad" value="medio"> Medio</label>
+                    <label><input type="radio" name="nuevoSeveridad" value="bajo"> Bajo</label>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="cerrarModalCrear()">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarEnlaceNuevo()">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    Crear Enlace
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
