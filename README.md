@@ -1,10 +1,4 @@
-¡Por supuesto! Aquí tienes una plantilla de `README.md` estructurada profesionalmente y hecha a la medida de tu proyecto.
 
-Incluí el paso crítico de descargar el modelo (como lo hablamos en el paso anterior) y las instrucciones para instalar los requerimientos.
-
-Puedes copiar este texto y guardarlo en un archivo llamado `README.md` en la raíz de tu proyecto:
-
-```markdown
 #  Mapeo Curricular con IA (BETO NLP)
 
 Una aplicación web desarrollada en **Flask** que automatiza el análisis de syllabus universitarios (PDFs). Extrae los Resultados de Aprendizaje (RAs) y utiliza un modelo de Procesamiento de Lenguaje Natural (NLP) basado en **BETO fine-tuneado** para inferir conexiones semánticas entre asignaturas, generando grafos interactivos de la malla curricular.
@@ -39,7 +33,10 @@ En windows:
 ```bash
 python -m venv venv
 venv\Scripts\activate
+
 ```
+
+
 En Linux/MacOS:
 ```bash
 python3 -m venv venv
