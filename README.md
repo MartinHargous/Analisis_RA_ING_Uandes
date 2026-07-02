@@ -54,7 +54,7 @@ pip install -r requirements.txt
 **4. IMPORTANTE: Descargar el modelo NLP**
 Debido a restricciones de tamaño (aprox. 6.5 GB), el modelo de Inteligencia Artificial no está incluido en este repositorio.
 
-1. Descarga el modelo desde [aquí](https://drive.google.com/file/d/1dxcgn7n7F0RvcODmm1E_BidAw0_sVy8f/view?usp=sharing).
+1. Descarga el modelo desde [aquí](https://drive.google.com/file/d/1w5HLVFqv_OuJ5_o5pNhWRp55rkO5ESWU/view?usp=sharing).
 2. Descomprime la carpeta y asegúrate de que se llame exactamente `resultados_beto_finetuned_negative`.
 3. Colócala en la raíz del proyecto (al mismo nivel que `app.py`).
 
